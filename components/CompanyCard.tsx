@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrasilAPIResponse } from '../types';
-import { Building2, MapPin, Users, CheckCircle, AlertCircle, Copy, PenLine, Mail, Phone } from 'lucide-react';
+import { Building2, MapPin, Users, CheckCircle, AlertCircle, Copy, PenLine, Mail, Phone, Check } from 'lucide-react';
 
 interface CompanyCardProps {
   data: BrasilAPIResponse;
@@ -11,6 +11,36 @@ interface CompanyCardProps {
   contactPhone: string;
   onContactPhoneChange: (value: string) => void;
 }
+
+// Componente auxiliar para botão de copiar no header
+const HeaderCopyBtn: React.FC<{ text: string; lightMode?: boolean }> = ({ text, lightMode = false }) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita focar no input se estiver dentro de um label/div
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!text) return null;
+
+  return (
+    <button
+      onClick={handleCopy}
+      type="button"
+      className={`p-1 rounded transition-colors duration-200 no-print 
+        ${lightMode 
+          ? 'text-gray-400 hover:text-pink-600 hover:bg-pink-50' 
+          : 'text-white/70 hover:text-white hover:bg-white/20'
+        }`}
+      title="Copiar dado"
+    >
+      {copied ? <Check size={14} className={lightMode ? "text-green-500" : "text-green-300"} /> : <Copy size={14} />}
+    </button>
+  );
+};
 
 const InfoRow: React.FC<{ label: string; value: string; copyable?: boolean }> = ({ label, value, copyable = true }) => {
   const [copied, setCopied] = React.useState(false);
@@ -23,19 +53,19 @@ const InfoRow: React.FC<{ label: string; value: string; copyable?: boolean }> = 
   };
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded-md transition-colors">
-      <span className="text-sm font-medium text-gray-500 mb-1 sm:mb-0 w-1/3">{label}</span>
-      <div className="flex items-center gap-2 flex-1 sm:justify-end min-w-0">
-        <span className="text-sm text-gray-900 font-medium truncate max-w-full block" title={value}>
+    <div className="flex flex-row items-center justify-between py-1 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded-md transition-colors select-text group">
+      <span className="text-xs font-semibold text-gray-500 w-1/3 uppercase">{label}</span>
+      <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+        <span className="text-xs sm:text-sm text-gray-900 font-medium break-words text-right selection:bg-pink-200 selection:text-pink-900" title={value}>
           {value || '-'}
         </span>
         {copyable && value && (
           <button
             onClick={handleCopy}
-            className="p-1 hover:bg-gray-200 rounded-md transition-colors text-gray-400 hover:text-pink-500 focus:outline-none"
+            className="p-1 hover:bg-gray-200 rounded-md transition-colors text-gray-400 hover:text-pink-500 focus:outline-none no-print opacity-0 group-hover:opacity-100"
             title="Copiar"
           >
-            {copied ? <CheckCircle size={14} className="text-green-500" /> : <Copy size={14} />}
+            {copied ? <CheckCircle size={12} className="text-green-500" /> : <Copy size={12} />}
           </button>
         )}
       </div>
@@ -52,7 +82,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   contactPhone,
   onContactPhoneChange
 }) => {
-  const isActive = data.situacao_cadastral === '2' || data.situacao_cadastral === 'ATIVO' || data.situacao_cadastral === 'Ativa'; 
+  // Correção Lógica Situação Cadastral
+  const rawStatus = data.situacao_cadastral;
+  const statusDesc = data.descricao_situacao_cadastral || '';
+  
+  const isActive = String(rawStatus) === '2' || 
+                   statusDesc.toUpperCase() === 'ATIVA' || 
+                   statusDesc.toUpperCase() === 'ATIVO';
+
+  // Texto a ser exibido no badge
+  const statusLabel = isActive ? 'ATIVA' : (statusDesc || 'INATIVA');
   
   // Format Date Helper
   const formatDate = (dateString: string) => {
@@ -62,110 +101,119 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-      {/* Header with CHOC-LAR Theme Gradient */}
-      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-6 text-white relative">
-        <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-          <div className="flex-1 w-full">
-             <div className="flex items-center justify-between">
-                <h2 className="text-lg md:text-xl font-bold opacity-90 mb-1">Razão Social:</h2>
-                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1 shrink-0 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-400 text-white'} md:hidden`}>
-                  {isActive ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                  {data.situacao_cadastral}
-                </div>
-             </div>
-             <p className="text-2xl md:text-3xl font-extrabold leading-tight tracking-tight mb-4">{data.razao_social}</p>
-            
-            {/* Editable Fields Container - High Visibility */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20 mt-2">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden select-text">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-3 text-white relative">
+        <div className="flex flex-col gap-1">
+          
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+               <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-[10px] uppercase font-bold opacity-80">Razão Social</h2>
+                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-400 text-white'}`}>
+                    {statusLabel}
+                  </div>
+               </div>
+               <div className="flex items-center gap-2 group">
+                 <p className="text-lg font-extrabold leading-tight tracking-tight selection:bg-white selection:text-pink-600">{data.razao_social}</p>
+                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HeaderCopyBtn text={data.razao_social} />
+                 </div>
+               </div>
+            </div>
+          </div>
+          
+          {/* Editable Fields Container */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20 mt-1">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
               
-              {/* Fantasy Name Row */}
-              <div className="mb-4">
-                <label className="text-xs uppercase font-bold text-white/80 tracking-wider flex items-center gap-2 mb-1">
-                  <Building2 size={14} /> Nome Fantasia (Editável)
+              {/* Fantasy Name */}
+              <div className="md:col-span-6 relative">
+                <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                  <Building2 size={10} /> Nome Fantasia
                 </label>
-                <div className="relative group">
+                <div className="relative group/input">
                   <input 
                     type="text" 
                     value={fantasyName}
                     onChange={(e) => onFantasyNameChange(e.target.value)}
-                    placeholder="Digite o nome fantasia..."
-                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded-md py-2 px-3 text-lg font-bold shadow-inner focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+                    placeholder="Nome Fantasia..."
+                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded px-2 py-1 pr-8 text-sm font-bold shadow-inner focus:ring-1 focus:ring-yellow-400 outline-none transition-all"
                   />
-                  <PenLine size={16} className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <HeaderCopyBtn text={fantasyName} lightMode={true} />
+                  </div>
                 </div>
               </div>
 
-              {/* Email & Phone Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Email */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-2 mb-1">
-                    <Mail size={12} /> E-mail (Editável)
-                  </label>
-                  <div className="relative">
-                    <input 
-                      type="email" 
-                      value={email}
-                      onChange={(e) => onEmailChange(e.target.value)}
-                      placeholder="email@empresa.com"
-                      className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded-md py-1.5 px-3 text-sm focus:bg-white/30 focus:border-white outline-none transition-all"
-                    />
+              {/* Email */}
+              <div className="md:col-span-3">
+                <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                  <Mail size={10} /> E-mail
+                </label>
+                <div className="relative group/input">
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => onEmailChange(e.target.value)}
+                    placeholder="Email..."
+                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-1 pr-8 text-xs focus:bg-white/30 outline-none transition-all"
+                  />
+                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                    <HeaderCopyBtn text={email} />
                   </div>
                 </div>
+              </div>
 
-                {/* Phone */}
-                <div>
-                   <label className="text-[10px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-2 mb-1">
-                    <Phone size={12} /> WhatsApp/Contato (Editável)
-                  </label>
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      value={contactPhone}
-                      onChange={(e) => onContactPhoneChange(e.target.value)}
-                      placeholder="(00) 00000-0000"
-                      className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded-md py-1.5 px-3 text-sm focus:bg-white/30 focus:border-white outline-none transition-all"
-                    />
+              {/* Phone */}
+              <div className="md:col-span-3">
+                 <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                  <Phone size={10} /> Tel/WhatsApp
+                </label>
+                <div className="relative group/input">
+                  <input 
+                    type="text" 
+                    value={contactPhone}
+                    onChange={(e) => onContactPhoneChange(e.target.value)}
+                    placeholder="Telefone..."
+                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-1 pr-8 text-xs focus:bg-white/30 outline-none transition-all"
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                    <HeaderCopyBtn text={contactPhone} />
                   </div>
                 </div>
               </div>
 
             </div>
+          </div>
 
-          </div>
-          <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide hidden md:flex items-center gap-1 shrink-0 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-400 text-white'}`}>
-             {isActive ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-             {data.situacao_cadastral}
-          </div>
         </div>
       </div>
 
-      <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Body */}
+      <div className="p-2 grid grid-cols-2 gap-4">
         {/* Left Column: Basic Info */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Building2 className="text-pink-500" size={20} />
+          <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+            <Building2 className="text-pink-500" size={14} />
             Dados Cadastrais
           </h3>
-          <div className="bg-white rounded-lg border border-gray-200 p-1">
+          <div className="bg-white">
             <InfoRow label="CNPJ" value={data.cnpj} />
             <InfoRow label="Abertura" value={formatDate(data.data_inicio_atividade)} />
-            <InfoRow label="CNAE Principal" value={`${data.cnae_fiscal} - ${data.cnae_fiscal_descricao}`} />
-            <InfoRow label="Telefone Fiscal" value={data.ddd_telefone_1} />
+            <InfoRow label="CNAE" value={`${data.cnae_fiscal} - ${data.cnae_fiscal_descricao}`} />
+            <InfoRow label="Tel. Fiscal" value={data.ddd_telefone_1} />
           </div>
         </div>
 
         {/* Right Column: Address */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <MapPin className="text-blue-500" size={20} />
+          <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+            <MapPin className="text-blue-500" size={14} />
             Localização
           </h3>
-          <div className="bg-white rounded-lg border border-gray-200 p-1">
-             <InfoRow label="Logradouro" value={`${data.descricao_tipo_de_logradouro} ${data.logradouro}`} />
-             <InfoRow label="Número" value={data.numero} />
-             <InfoRow label="Complemento" value={data.complemento} />
+          <div className="bg-white">
+             <InfoRow label="Endereço" value={`${data.descricao_tipo_de_logradouro} ${data.logradouro}, ${data.numero}`} />
              <InfoRow label="Bairro" value={data.bairro} />
              <InfoRow label="Cidade/UF" value={`${data.municipio} - ${data.uf}`} />
              <InfoRow label="CEP" value={data.cep} />
@@ -173,18 +221,18 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         </div>
       </div>
       
-      {/* Quadro Societário (if available) */}
+      {/* Quadro Societário */}
       {data.qsa && data.qsa.length > 0 && (
-        <div className="px-6 pb-6">
-           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Users className="text-green-500" size={20} />
-            Quadro Societário
+        <div className="px-2 pb-2">
+           <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+            <Users className="text-green-500" size={14} />
+            Sócios
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.qsa.map((socio, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm">
-                <p className="font-semibold text-gray-900">{socio.nome_socio}</p>
-                <p className="text-gray-500">{socio.qualificacao_socio}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {data.qsa.slice(0, 4).map((socio, index) => (
+              <div key={index} className="px-2 py-1 bg-gray-50 rounded border border-gray-100 text-[10px] flex justify-between items-center">
+                <span className="font-semibold text-gray-900 truncate mr-1">{socio.nome_socio}</span>
+                <span className="text-gray-500 whitespace-nowrap hidden sm:inline">{socio.qualificacao_socio}</span>
               </div>
             ))}
           </div>
