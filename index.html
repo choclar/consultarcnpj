@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://lucide.dev/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Viewport otimizado para mobile com suporte a notch (viewport-fit=cover) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- Meta tags para aparência nativa -->
+    <meta name="theme-color" content="#ec4899" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+
     <title>PESQUISA CNPJ CHOC-LAR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -11,9 +20,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background-color: #f8fafc;
+        /* Melhora a rolagem no iOS */
+        -webkit-overflow-scrolling: touch; 
+        /* Previne highlight azul ao tocar em botões no mobile */
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Fix para altura real no mobile (evita que a barra do navegador esconda conteúdo) */
+      .min-h-screen {
+        min-height: 100vh; /* Fallback */
+        min-height: 100dvh; /* Dynamic Viewport Height */
+      }
+
+      /* Classes utilitárias injetadas via JS para correções específicas */
+      body.os-ios input {
+        /* Previne zoom automático no iOS em inputs < 16px */
+        font-size: 16px !important; 
       }
 
       /* Estilos exclusivos para Impressão / Salvar como PDF */
