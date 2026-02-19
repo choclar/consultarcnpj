@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, ArrowRight, Share2, Copy, Check, MessageCircle } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Share2, Copy, Check, FileText, Image as ImageIcon, Download } from 'lucide-react';
 import { fetchCompanyData } from './services/brasilApi';
 import { analyzeCompanyProfile } from './services/geminiService';
 import { CompanyCard } from './components/CompanyCard';
@@ -21,8 +21,9 @@ const App: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   
-  // Estado para o loading do compartilhamento
-  const [isSharing, setIsSharing] = useState(false);
+  // Estados para loading de exportação
+  const [isSharingPDF, setIsSharingPDF] = useState(false);
+  const [isSharingImage, setIsSharingImage] = useState(false);
 
   // DETECÇÃO DE DISPOSITIVO E S.O.
   useEffect(() => {
@@ -116,18 +117,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Helper to get text status
-  const getStatusText = (data: BrasilAPIResponse) => {
-    const raw = String(data.situacao_cadastral);
-    const desc = data.descricao_situacao_cadastral || '';
-    if (raw === '2' || desc.toUpperCase() === 'ATIVA') return 'ATIVA';
-    return desc || 'INATIVA';
-  };
-
   const handleCopyData = () => {
     if (!companyData) return;
 
-    const statusText = getStatusText(companyData);
+    // A descrição já vem normalizada pelo service (ATIVA, BAIXADA, ETC)
+    const statusText = companyData.descricao_situacao_cadastral;
 
     const textData = `
 DADOS DA EMPRESA (CHOC-LAR)
@@ -168,16 +162,77 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleShare = async () => {
+  // Compartilhar como Imagem (Foto)
+  const handleShareImage = async () => {
     if (!companyData) return;
-    setIsSharing(true);
+    setIsSharingImage(true);
+    await new Promise(resolve => setTimeout(resolve, 100)); // Delay para UI
+
+    const element = document.getElementById('report-content');
+    if (!element || !(window as any).html2canvas) {
+        setIsSharingImage(false);
+        alert("Erro: Biblioteca de imagem não carregada.");
+        return;
+    }
+
+    try {
+        const canvas = await (window as any).html2canvas(element, {
+            scale: 2, // Melhor qualidade
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            scrollY: 0, // IMPORTANT: Fix for scrolled content cropping
+            scrollX: 0
+        });
+
+        canvas.toBlob(async (blob: Blob | null) => {
+            if (!blob) {
+                throw new Error("Falha ao gerar imagem.");
+            }
+
+            const fileName = `Consulta_${companyData.cnpj.replace(/\D/g,'')}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            // Tenta compartilhar nativamente
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Consulta CNPJ',
+                        text: `Dados da empresa ${companyData.razao_social}`
+                    });
+                } catch (shareError) {
+                    // Usuário cancelou ou erro, não faz nada
+                    console.log("Compartilhamento cancelado/erro", shareError);
+                }
+            } else {
+                // Fallback: Download
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+            setIsSharingImage(false);
+        }, 'image/png');
+
+    } catch (error) {
+        console.error("Erro ao gerar imagem:", error);
+        alert("Não foi possível gerar a imagem.");
+        setIsSharingImage(false);
+    }
+  };
+
+  // Compartilhar como PDF
+  const handleSharePDF = async () => {
+    if (!companyData) return;
+    setIsSharingPDF(true);
 
     // Pequeno delay para garantir renderização de estados visuais
     await new Promise(resolve => setTimeout(resolve, 100));
 
     const element = document.getElementById('report-content');
     if (!element) {
-        setIsSharing(false);
+        setIsSharingPDF(false);
         return;
     }
 
@@ -187,9 +242,9 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
     const opt = {
       margin: 5,
       filename: `Relatorio_${companyData.cnpj}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
+      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: isMobile ? 1.5 : 2, // Reduz escala no mobile para evitar crash de memória
+        scale: isMobile ? 1.5 : 2, 
         useCORS: true, 
         letterRendering: true,
         scrollY: 0,
@@ -198,7 +253,6 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
     };
 
     try {
-      // Use type assertion to access html2pdf from window
       const html2pdf = (window as any).html2pdf;
       if (!html2pdf) {
         throw new Error('Biblioteca PDF não carregada.');
@@ -207,35 +261,42 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
       // Gera o PDF como Blob
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
       
-      const file = new File([pdfBlob], `Relatorio_${companyData.razao_social.substring(0, 10).trim()}.pdf`, { type: 'application/pdf' });
+      const fileName = `Relatorio_${companyData.razao_social.substring(0, 10).trim()}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      // Tenta usar a API nativa de compartilhamento (Celulares/Tablets)
+      // Tenta usar a API nativa de compartilhamento
+      let shared = false;
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Relatório Cadastral',
-          text: `Segue PDF com dados da empresa ${companyData.razao_social}`,
-        });
-      } else {
-        // Fallback para Desktop ou navegadores sem suporte a share de arquivos
+        try {
+            await navigator.share({
+              files: [file],
+              title: 'Relatório Cadastral',
+              text: `Segue PDF com dados da empresa ${companyData.razao_social}`,
+            });
+            shared = true;
+        } catch (e) {
+            console.log("Falha no share nativo, tentando download...", e);
+            // Se falhar o share (comum no Android com arquivos), cai para o download abaixo
+        }
+      } 
+      
+      if (!shared) {
+        // Fallback robusto para Download
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Relatorio_${companyData.cnpj}.pdf`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        if (isMobile) {
-            alert('PDF Gerado e baixado! Verifique seus downloads.');
-        }
       }
+
     } catch (error) {
       console.error('Erro ao gerar/compartilhar PDF:', error);
-      alert('Não foi possível gerar o PDF. Tente tirar um print da tela se o erro persistir.');
+      alert('Erro ao processar o PDF. Tente a opção "Foto".');
     } finally {
-      setIsSharing(false);
+      setIsSharingPDF(false);
     }
   };
 
@@ -245,8 +306,8 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
       {/* Header - Hidden in Print */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm no-print supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center select-none" title="CHOC-LAR">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="flex items-center select-none shrink-0" title="CHOC-LAR">
               <div className="flex items-baseline text-xl sm:text-2xl font-black tracking-tight">
                 <span className="text-green-500">C</span>
                 <span className="text-blue-500">H</span>
@@ -260,12 +321,19 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
                 <span className="text-yellow-400">R</span>
               </div>
             </div>
-            <div className="h-6 w-px bg-gray-200 mx-2 hidden sm:block"></div>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest hidden sm:block pt-1">
-              Pesquisa CNPJ
+            
+            {/* Divisor Dinâmico */}
+            <div className={`h-6 w-px bg-gray-200 mx-2 ${companyData ? 'block' : 'hidden sm:block'}`}></div>
+            
+            {/* Título Dinâmico */}
+            <span className={`text-xs font-semibold uppercase tracking-widest pt-1 truncate transition-colors duration-300
+              ${companyData ? 'text-gray-900 block max-w-[150px] sm:max-w-md' : 'text-gray-400 hidden sm:block'}`}
+            >
+              {companyData ? companyData.razao_social : 'Pesquisa CNPJ'}
             </span>
           </div>
-          <div className="text-[10px] sm:text-xs text-gray-400 hidden sm:block font-medium">
+          
+          <div className="text-[10px] sm:text-xs text-gray-400 hidden sm:block font-medium shrink-0 ml-2">
             Powered by Gemini AI
           </div>
         </div>
@@ -321,22 +389,38 @@ ${analysis?.suggestedSalesPitch || 'N/A'}
             <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-4 no-print">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800">Resultado da Consulta</h2>
               
-              <div className="flex w-full sm:w-auto items-center gap-2">
+              <div className="flex flex-wrap w-full sm:w-auto items-center gap-2">
                 
-                {/* Share Button */}
-                <button 
-                  onClick={handleShare}
-                  disabled={isSharing}
-                  className="flex-1 sm:flex-none justify-center bg-[#25D366] hover:bg-[#128C7E] text-white px-4 py-3 sm:py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait active:scale-95 touch-manipulation"
-                >
-                  {isSharing ? <Loader2 className="animate-spin" size={18} /> : <Share2 size={18} />}
-                  {isSharing ? 'Gerando...' : 'Compartilhar'}
-                </button>
+                {/* Botões de Exportação */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Share PDF Button */}
+                    <button 
+                      onClick={handleSharePDF}
+                      disabled={isSharingPDF || isSharingImage}
+                      className="flex-1 justify-center bg-red-500 hover:bg-red-600 text-white px-3 py-3 sm:py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 disabled:opacity-70 disabled:cursor-wait active:scale-95 touch-manipulation text-sm sm:text-base"
+                      title="Salvar ou Compartilhar PDF"
+                    >
+                      {isSharingPDF ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
+                      {isSharingPDF ? 'Gerando...' : 'PDF'}
+                    </button>
+
+                    {/* Share Image Button */}
+                    <button 
+                      onClick={handleShareImage}
+                      disabled={isSharingPDF || isSharingImage}
+                      className="flex-1 justify-center bg-blue-500 hover:bg-blue-600 text-white px-3 py-3 sm:py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 disabled:opacity-70 disabled:cursor-wait active:scale-95 touch-manipulation text-sm sm:text-base"
+                      title="Compartilhar como Imagem (Melhor para WhatsApp)"
+                    >
+                      {isSharingImage ? <Loader2 className="animate-spin" size={18} /> : <ImageIcon size={18} />}
+                      {isSharingImage ? 'Criando...' : 'Foto'}
+                    </button>
+                </div>
 
                  {/* Copy Button */}
                  <button 
                   onClick={handleCopyData}
                   className={`px-4 py-3 sm:py-2 rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2 border active:bg-gray-100 touch-manipulation ${isCopied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                  title="Copiar texto para área de transferência"
                 >
                   {isCopied ? <Check size={18} /> : <Copy size={18} />}
                 </button>
