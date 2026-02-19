@@ -43,10 +43,10 @@ export const AIAnalysisSection: React.FC<AIAnalysisSectionProps> = ({ analysis, 
 
         {/* 
             Dynamic Layout:
-            Compact: grid-cols-3
-            Expanded: flex-col (stacked)
+            Mobile: Always flex-col (stacked) unless grid logic forced, but stacks are better for readability.
+            Desktop: grid-cols-3 when compact, flex-col when expanded.
         */}
-        <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'flex flex-col gap-4' : 'grid grid-cols-3 gap-2'}`}>
+        <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'flex flex-col gap-4' : 'grid grid-cols-1 sm:grid-cols-3 gap-2'}`}>
           
           {/* Summary */}
           <div className={`rounded p-2 border transition-all ${isExpanded ? 'bg-pink-50 border-pink-200 shadow-sm' : 'bg-pink-50/50 border-pink-100'}`}>
@@ -54,7 +54,7 @@ export const AIAnalysisSection: React.FC<AIAnalysisSectionProps> = ({ analysis, 
               <Briefcase size={isExpanded ? 16 : 10} />
               <h4>Resumo</h4>
             </div>
-            <p className={`text-gray-700 leading-tight text-justify selection:bg-pink-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-[10px]'}`}>
+            <p className={`text-gray-700 leading-tight text-justify selection:bg-pink-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-xs sm:text-[10px]'}`}>
               {analysis.summary}
             </p>
           </div>
@@ -65,7 +65,7 @@ export const AIAnalysisSection: React.FC<AIAnalysisSectionProps> = ({ analysis, 
               <ShieldAlert size={isExpanded ? 16 : 10} />
               <h4>Risco</h4>
             </div>
-            <p className={`text-gray-700 leading-tight text-justify selection:bg-blue-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-[10px]'}`}>
+            <p className={`text-gray-700 leading-tight text-justify selection:bg-blue-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-xs sm:text-[10px]'}`}>
               {analysis.riskAssessment}
             </p>
           </div>
@@ -76,16 +76,16 @@ export const AIAnalysisSection: React.FC<AIAnalysisSectionProps> = ({ analysis, 
               <Lightbulb size={isExpanded ? 16 : 10} />
               <h4>Pitch</h4>
             </div>
-            <p className={`text-gray-700 leading-tight italic text-justify selection:bg-green-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-[10px]'}`}>
+            <p className={`text-gray-700 leading-tight italic text-justify selection:bg-green-200 ${isExpanded ? 'text-sm leading-relaxed' : 'text-xs sm:text-[10px]'}`}>
               "{analysis.suggestedSalesPitch}"
             </p>
           </div>
         </div>
 
-        {/* Expand Button - Hidden in Print unless you want the expanded view to print */}
+        {/* Expand Button - Large touch target on mobile */}
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full mt-3 py-1.5 flex items-center justify-center gap-1 text-xs font-semibold text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded transition-colors no-print"
+          className="w-full mt-3 py-2 sm:py-1.5 flex items-center justify-center gap-1 text-xs font-semibold text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded transition-colors no-print touch-manipulation"
         >
           {isExpanded ? (
             <>

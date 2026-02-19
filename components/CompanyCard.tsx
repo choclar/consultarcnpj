@@ -17,7 +17,7 @@ const HeaderCopyBtn: React.FC<{ text: string; lightMode?: boolean }> = ({ text, 
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita focar no input se estiver dentro de um label/div
+    e.stopPropagation(); // Evita focar no input
     if (!text) return;
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -30,14 +30,15 @@ const HeaderCopyBtn: React.FC<{ text: string; lightMode?: boolean }> = ({ text, 
     <button
       onClick={handleCopy}
       type="button"
-      className={`p-1 rounded transition-colors duration-200 no-print 
+      // Aumentado a área de toque para mobile (p-2 ou min-h-44px visualmente)
+      className={`p-2 sm:p-1 rounded transition-colors duration-200 no-print touch-manipulation
         ${lightMode 
-          ? 'text-gray-400 hover:text-pink-600 hover:bg-pink-50' 
-          : 'text-white/70 hover:text-white hover:bg-white/20'
+          ? 'text-gray-400 hover:text-pink-600 hover:bg-pink-50 active:bg-pink-100' 
+          : 'text-white/70 hover:text-white hover:bg-white/20 active:bg-white/30'
         }`}
       title="Copiar dado"
     >
-      {copied ? <Check size={14} className={lightMode ? "text-green-500" : "text-green-300"} /> : <Copy size={14} />}
+      {copied ? <Check size={16} className={lightMode ? "text-green-500" : "text-green-300"} /> : <Copy size={16} />}
     </button>
   );
 };
@@ -53,19 +54,19 @@ const InfoRow: React.FC<{ label: string; value: string; copyable?: boolean }> = 
   };
 
   return (
-    <div className="flex flex-row items-center justify-between py-1 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded-md transition-colors select-text group">
-      <span className="text-xs font-semibold text-gray-500 w-1/3 uppercase">{label}</span>
-      <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-        <span className="text-xs sm:text-sm text-gray-900 font-medium break-words text-right selection:bg-pink-200 selection:text-pink-900" title={value}>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 sm:py-1 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded-md transition-colors select-text group">
+      <span className="text-xs font-semibold text-gray-500 sm:w-1/3 uppercase mb-1 sm:mb-0">{label}</span>
+      <div className="flex items-center gap-2 flex-1 sm:justify-end min-w-0 justify-between">
+        <span className="text-sm text-gray-900 font-medium break-words text-left sm:text-right selection:bg-pink-200 selection:text-pink-900" title={value}>
           {value || '-'}
         </span>
         {copyable && value && (
           <button
             onClick={handleCopy}
-            className="p-1 hover:bg-gray-200 rounded-md transition-colors text-gray-400 hover:text-pink-500 focus:outline-none no-print opacity-0 group-hover:opacity-100"
+            className="p-2 sm:p-1 hover:bg-gray-200 rounded-md transition-colors text-gray-400 hover:text-pink-500 focus:outline-none no-print sm:opacity-0 sm:group-hover:opacity-100 active:opacity-100 touch-manipulation"
             title="Copiar"
           >
-            {copied ? <CheckCircle size={12} className="text-green-500" /> : <Copy size={12} />}
+            {copied ? <CheckCircle size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         )}
       </div>
@@ -103,20 +104,22 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden select-text">
       {/* Header */}
-      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-3 text-white relative">
-        <div className="flex flex-col gap-1">
+      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-3 sm:p-4 text-white relative">
+        <div className="flex flex-col gap-2">
           
           <div className="flex items-start justify-between">
-            <div className="flex-1">
-               <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 min-w-0">
+               <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h2 className="text-[10px] uppercase font-bold opacity-80">Razão Social</h2>
                   <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-400 text-white'}`}>
                     {statusLabel}
                   </div>
                </div>
-               <div className="flex items-center gap-2 group">
-                 <p className="text-lg font-extrabold leading-tight tracking-tight selection:bg-white selection:text-pink-600">{data.razao_social}</p>
-                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+               <div className="flex items-center gap-2 group relative">
+                 <p className="text-lg sm:text-xl font-extrabold leading-tight tracking-tight selection:bg-white selection:text-pink-600 break-words pr-8">
+                   {data.razao_social}
+                 </p>
+                 <div className="absolute right-0 top-0 sm:static sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <HeaderCopyBtn text={data.razao_social} />
                  </div>
                </div>
@@ -124,12 +127,12 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
           </div>
           
           {/* Editable Fields Container */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20 mt-1">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 mt-1">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 items-end">
               
               {/* Fantasy Name */}
               <div className="md:col-span-6 relative">
-                <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                <label className="text-[10px] sm:text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-1">
                   <Building2 size={10} /> Nome Fantasia
                 </label>
                 <div className="relative group/input">
@@ -138,7 +141,8 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                     value={fantasyName}
                     onChange={(e) => onFantasyNameChange(e.target.value)}
                     placeholder="Nome Fantasia..."
-                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded px-2 py-1 pr-8 text-sm font-bold shadow-inner focus:ring-1 focus:ring-yellow-400 outline-none transition-all"
+                    // IMPORTANTE: text-base no mobile previne zoom no iOS. md:text-sm no desktop.
+                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-sm font-bold shadow-inner focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
                   />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <HeaderCopyBtn text={fantasyName} lightMode={true} />
@@ -148,7 +152,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 
               {/* Email */}
               <div className="md:col-span-3">
-                <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                <label className="text-[10px] sm:text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-1">
                   <Mail size={10} /> E-mail
                 </label>
                 <div className="relative group/input">
@@ -157,7 +161,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                     value={email}
                     onChange={(e) => onEmailChange(e.target.value)}
                     placeholder="Email..."
-                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-1 pr-8 text-xs focus:bg-white/30 outline-none transition-all"
+                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
                   />
                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                     <HeaderCopyBtn text={email} />
@@ -167,16 +171,17 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 
               {/* Phone */}
               <div className="md:col-span-3">
-                 <label className="text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-0.5">
+                 <label className="text-[10px] sm:text-[9px] uppercase font-bold text-white/80 tracking-wider flex items-center gap-1 mb-1">
                   <Phone size={10} /> Tel/WhatsApp
                 </label>
                 <div className="relative group/input">
                   <input 
                     type="text" 
+                    inputMode="tel"
                     value={contactPhone}
                     onChange={(e) => onContactPhoneChange(e.target.value)}
                     placeholder="Telefone..."
-                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-1 pr-8 text-xs focus:bg-white/30 outline-none transition-all"
+                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
                   />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                     <HeaderCopyBtn text={contactPhone} />
@@ -191,14 +196,14 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
       </div>
 
       {/* Body */}
-      <div className="p-2 grid grid-cols-2 gap-4">
+      <div className="p-3 sm:p-2 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-4">
         {/* Left Column: Basic Info */}
         <div>
-          <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+          <h3 className="text-xs font-bold text-gray-800 mb-2 sm:mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
             <Building2 className="text-pink-500" size={14} />
             Dados Cadastrais
           </h3>
-          <div className="bg-white">
+          <div className="bg-white flex flex-col gap-1">
             <InfoRow label="CNPJ" value={data.cnpj} />
             <InfoRow label="Abertura" value={formatDate(data.data_inicio_atividade)} />
             <InfoRow label="CNAE" value={`${data.cnae_fiscal} - ${data.cnae_fiscal_descricao}`} />
@@ -208,11 +213,11 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
 
         {/* Right Column: Address */}
         <div>
-          <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+          <h3 className="text-xs font-bold text-gray-800 mb-2 sm:mb-1 flex items-center gap-1 border-b border-gray-100 pb-1 mt-2 sm:mt-0">
             <MapPin className="text-blue-500" size={14} />
             Localização
           </h3>
-          <div className="bg-white">
+          <div className="bg-white flex flex-col gap-1">
              <InfoRow label="Endereço" value={`${data.descricao_tipo_de_logradouro} ${data.logradouro}, ${data.numero}`} />
              <InfoRow label="Bairro" value={data.bairro} />
              <InfoRow label="Cidade/UF" value={`${data.municipio} - ${data.uf}`} />
@@ -223,16 +228,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
       
       {/* Quadro Societário */}
       {data.qsa && data.qsa.length > 0 && (
-        <div className="px-2 pb-2">
-           <h3 className="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1 border-b border-gray-100 pb-1">
+        <div className="px-3 pb-3 sm:px-2 sm:pb-2">
+           <h3 className="text-xs font-bold text-gray-800 mb-2 sm:mb-1 flex items-center gap-1 border-b border-gray-100 pb-1 mt-2 sm:mt-0">
             <Users className="text-green-500" size={14} />
             Sócios
           </h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {data.qsa.slice(0, 4).map((socio, index) => (
-              <div key={index} className="px-2 py-1 bg-gray-50 rounded border border-gray-100 text-[10px] flex justify-between items-center">
+              <div key={index} className="px-3 py-2 sm:px-2 sm:py-1 bg-gray-50 rounded border border-gray-100 text-xs sm:text-[10px] flex justify-between items-center">
                 <span className="font-semibold text-gray-900 truncate mr-1">{socio.nome_socio}</span>
-                <span className="text-gray-500 whitespace-nowrap hidden sm:inline">{socio.qualificacao_socio}</span>
+                <span className="text-gray-500 whitespace-nowrap text-[10px]">{socio.qualificacao_socio}</span>
               </div>
             ))}
           </div>
