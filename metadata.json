@@ -1,0 +1,5 @@
+{
+  "name": "PESQUISA CNPJ CHOC-LAR",
+  "description": "Sistema inteligente de consulta e cadastro de empresas via CNPJ utilizando BrasilAPI e Google Gemini para análise de perfil corporativo.",
+  "requestFramePermissions": []
+}
