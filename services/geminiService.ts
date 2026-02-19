@@ -10,9 +10,9 @@ export const analyzeCompanyProfile = async (companyData: BrasilAPIResponse): Pro
       ${JSON.stringify(companyData)}
 
       Por favor, forneça:
-      1. Um resumo executivo do perfil da empresa (atividade principal, tempo de mercado, localização).
-      2. Uma avaliação simples de risco baseada na situação cadastral e sócios (informal, apenas indicativo).
-      3. Uma sugestão de abordagem comercial (pitch) curta para vender serviços B2B para esta empresa.
+      1. Um resumo executivo estratégico do perfil da empresa (atividade principal, tempo de mercado, localização e potencial).
+      2. Uma avaliação de risco comercial baseada na situação cadastral, capital social (se houver) e sócios.
+      3. Uma sugestão de abordagem comercial (pitch) persuasiva e personalizada para vender serviços B2B para esta empresa, focando nas dores prováveis do setor.
 
       Responda estritamente em JSON seguindo o schema.
     `;
@@ -25,9 +25,9 @@ export const analyzeCompanyProfile = async (companyData: BrasilAPIResponse): Pro
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            summary: { type: Type.STRING, description: "Resumo executivo da empresa." },
-            riskAssessment: { type: Type.STRING, description: "Avaliação de risco cadastral." },
-            suggestedSalesPitch: { type: Type.STRING, description: "Pitch de vendas sugerido." }
+            summary: { type: Type.STRING, description: "Resumo executivo estratégico da empresa." },
+            riskAssessment: { type: Type.STRING, description: "Avaliação de risco detalhada." },
+            suggestedSalesPitch: { type: Type.STRING, description: "Pitch de vendas estratégico." }
           },
           required: ["summary", "riskAssessment", "suggestedSalesPitch"]
         }
