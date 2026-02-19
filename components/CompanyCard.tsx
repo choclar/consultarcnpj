@@ -83,16 +83,12 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   contactPhone,
   onContactPhoneChange
 }) => {
-  // Correção Lógica Situação Cadastral
-  const rawStatus = data.situacao_cadastral;
-  const statusDesc = data.descricao_situacao_cadastral || '';
+  // Lógica Robustecida: Confia estritamente no código numérico sanitizado pelo serviço
+  // 2 = ATIVA. Qualquer outra coisa não é ativa.
+  const isActive = data.situacao_cadastral === 2;
   
-  const isActive = String(rawStatus) === '2' || 
-                   statusDesc.toUpperCase() === 'ATIVA' || 
-                   statusDesc.toUpperCase() === 'ATIVO';
-
-  // Texto a ser exibido no badge
-  const statusLabel = isActive ? 'ATIVA' : (statusDesc || 'INATIVA');
+  // O texto já vem correto do serviço (Ex: BAIXADA, INAPTA, ATIVA)
+  const statusLabel = data.descricao_situacao_cadastral || 'DESCONHECIDO';
   
   // Format Date Helper
   const formatDate = (dateString: string) => {
@@ -104,14 +100,14 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden select-text">
       {/* Header */}
-      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-3 sm:p-4 text-white relative">
+      <div className={`p-3 sm:p-4 text-white relative transition-colors duration-300 ${isActive ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500' : 'bg-gray-600'}`}>
         <div className="flex flex-col gap-2">
           
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
                <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h2 className="text-[10px] uppercase font-bold opacity-80">Razão Social</h2>
-                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-400 text-white'}`}>
+                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${isActive ? 'bg-green-400 text-green-900' : 'bg-red-500 text-white'}`}>
                     {statusLabel}
                   </div>
                </div>
@@ -127,7 +123,9 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
           </div>
           
           {/* Editable Fields Container */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 mt-1">
+          {/* REMOVIDO: backdrop-blur-sm para evitar artefatos no html2canvas */}
+          {/* ALTERADO: bg-white/10 para bg-white/20 para melhor contraste sem blur */}
+          <div className="bg-white/20 rounded-lg p-2 sm:p-3 border border-white/20 mt-1">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 items-end">
               
               {/* Fantasy Name */}
@@ -136,13 +134,13 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                   <Building2 size={10} /> Nome Fantasia
                 </label>
                 <div className="relative group/input">
+                  {/* ALTERADO: h-10, py-0, leading-10 para centralização vertical perfeita */}
                   <input 
                     type="text" 
                     value={fantasyName}
                     onChange={(e) => onFantasyNameChange(e.target.value)}
                     placeholder="Nome Fantasia..."
-                    // IMPORTANTE: text-base no mobile previne zoom no iOS. md:text-sm no desktop.
-                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-sm font-bold shadow-inner focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
+                    className="w-full bg-white/90 text-gray-900 placeholder-gray-400 rounded px-3 h-10 py-0 leading-[2.5rem] pr-10 text-base md:text-sm font-bold shadow-inner focus:ring-2 focus:ring-yellow-400 outline-none transition-all"
                   />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <HeaderCopyBtn text={fantasyName} lightMode={true} />
@@ -156,12 +154,13 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                   <Mail size={10} /> E-mail
                 </label>
                 <div className="relative group/input">
+                  {/* ALTERADO: h-10, py-0, leading-10 */}
                   <input 
                     type="email" 
                     value={email}
                     onChange={(e) => onEmailChange(e.target.value)}
                     placeholder="Email..."
-                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
+                    className="w-full bg-white/20 text-white placeholder-white/70 border border-white/30 rounded px-3 h-10 py-0 leading-[2.5rem] pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
                   />
                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                     <HeaderCopyBtn text={email} />
@@ -175,13 +174,14 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                   <Phone size={10} /> Tel/WhatsApp
                 </label>
                 <div className="relative group/input">
+                  {/* ALTERADO: h-10, py-0, leading-10 */}
                   <input 
                     type="text" 
                     inputMode="tel"
                     value={contactPhone}
                     onChange={(e) => onContactPhoneChange(e.target.value)}
                     placeholder="Telefone..."
-                    className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-3 py-2 sm:py-1 pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
+                    className="w-full bg-white/20 text-white placeholder-white/70 border border-white/30 rounded px-3 h-10 py-0 leading-[2.5rem] pr-10 text-base md:text-xs focus:bg-white/30 outline-none transition-all"
                   />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
                     <HeaderCopyBtn text={contactPhone} />
