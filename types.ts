@@ -2,7 +2,8 @@ export interface BrasilAPIResponse {
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
-  situacao_cadastral: string;
+  situacao_cadastral: number | string;
+  descricao_situacao_cadastral?: string;
   data_situacao_cadastral: string;
   data_inicio_atividade: string;
   cnae_fiscal: number;

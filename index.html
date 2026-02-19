@@ -15,6 +15,83 @@
         font-family: 'Inter', sans-serif;
         background-color: #f8fafc;
       }
+
+      /* Estilos exclusivos para Impressão / Salvar como PDF */
+      @media print {
+        @page {
+          margin: 5mm;
+          size: A4 portrait;
+        }
+        
+        body {
+          background-color: white;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        /* Ocultar elementos de UI */
+        .no-print, header, button, .shadow-sm {
+          display: none !important;
+          box-shadow: none !important;
+        }
+
+        /* Ajustar container principal */
+        #root {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+
+        main {
+          padding: 0 !important;
+          max-width: none !important;
+        }
+
+        /* Forçar visibilidade do relatório */
+        #report-content {
+          display: block !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
+        /* Transformar Inputs em Texto Limpo */
+        input {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          height: auto !important;
+          box-shadow: none !important;
+          font-weight: 700 !important;
+          color: inherit !important;
+        }
+        
+        /* Reduzir fontes globalmente para caber */
+        .text-lg, .text-xl, .text-2xl {
+          font-size: 12pt !important;
+          line-height: 1.2 !important;
+        }
+        
+        .text-sm, .text-base {
+          font-size: 9pt !important;
+        }
+
+        .text-xs {
+          font-size: 8pt !important;
+        }
+
+        /* Ajustes específicos de espaçamento */
+        .gap-4 { gap: 0.5rem !important; }
+        .gap-2 { gap: 0.25rem !important; }
+        .p-3, .p-4, .p-6 { padding: 0.5rem !important; }
+        .mb-6 { margin-bottom: 0.5rem !important; }
+        
+        /* Remover ícones decorativos de edição */
+        .lucide-pen-line { display: none !important; }
+      }
     </style>
   <script type="importmap">
 {

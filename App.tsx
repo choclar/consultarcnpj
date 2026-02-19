@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Loader2, ArrowRight, Save, Share2, FileDown } from 'lucide-react';
+import { Search, Loader2, ArrowRight, Save, Share2, Copy, Check, MessageCircle } from 'lucide-react';
 import { fetchCompanyData } from './services/brasilApi';
 import { analyzeCompanyProfile } from './services/geminiService';
 import { CompanyCard } from './components/CompanyCard';
 import { AIAnalysisSection } from './components/AIAnalysisSection';
 import { BrasilAPIResponse, AIAnalysisResult, LoadingState } from './types';
-
-// Declare html2pdf for TypeScript since it's loaded via script tag
-declare var html2pdf: any;
 
 const App: React.FC = () => {
   const [cnpjInput, setCnpjInput] = useState('');
@@ -22,7 +19,10 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [aiStatus, setAiStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  
+  // Estado para o loading do compartilhamento
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Simple mask logic: 00.000.000/0000-00
@@ -91,40 +91,123 @@ const App: React.FC = () => {
     alert(`Empresa ${companyData?.razao_social} cadastrada com sucesso no sistema CHOC-LAR!`);
   };
 
-  const handleGeneratePDF = () => {
+  // Helper to get text status
+  const getStatusText = (data: BrasilAPIResponse) => {
+    const raw = String(data.situacao_cadastral);
+    const desc = data.descricao_situacao_cadastral || '';
+    if (raw === '2' || desc.toUpperCase() === 'ATIVA') return 'ATIVA';
+    return desc || 'INATIVA';
+  };
+
+  const handleCopyData = () => {
     if (!companyData) return;
-    setIsGeneratingPdf(true);
+
+    const statusText = getStatusText(companyData);
+
+    const textData = `
+DADOS DA EMPRESA (CHOC-LAR)
+---------------------------
+Razão Social: ${companyData.razao_social}
+CNPJ: ${companyData.cnpj}
+Nome Fantasia: ${fantasyName || 'N/A'}
+Situação: ${statusText}
+Data Abertura: ${companyData.data_inicio_atividade}
+
+CONTATO
+-------
+Email: ${email || 'N/A'}
+Telefone/WhatsApp: ${contactPhone || companyData.ddd_telefone_1 || 'N/A'}
+
+ENDEREÇO
+--------
+${companyData.descricao_tipo_de_logradouro} ${companyData.logradouro}, ${companyData.numero} ${companyData.complemento}
+Bairro: ${companyData.bairro}
+Cidade: ${companyData.municipio} - ${companyData.uf}
+CEP: ${companyData.cep}
+
+SÓCIOS
+------
+${companyData.qsa?.map(s => `- ${s.nome_socio} (${s.qualificacao_socio})`).join('\n') || 'Sem informação de sócios'}
+
+RESUMO IA
+---------
+${analysis?.summary || 'N/A'}
+
+PITCH SUGERIDO
+--------------
+${analysis?.suggestedSalesPitch || 'N/A'}
+    `.trim();
+
+    navigator.clipboard.writeText(textData);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    if (!companyData) return;
+    setIsSharing(true);
 
     const element = document.getElementById('report-content');
+    if (!element) {
+        setIsSharing(false);
+        return;
+    }
+
+    // Configurações para o HTML2PDF
     const opt = {
-      margin: [10, 10, 10, 10], // top, left, bottom, right
-      filename: `Relatorio-CHOC-LAR-${companyData.cnpj}.pdf`,
+      margin: 5,
+      filename: `Relatorio_${companyData.cnpj}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(element).save().then(() => {
-      setIsGeneratingPdf(false);
-    });
+    try {
+      // @ts-ignore - html2pdf carregado via CDN
+      const pdfBlob = await window.html2pdf().set(opt).from(element).output('blob');
+      
+      const file = new File([pdfBlob], `Relatorio_${companyData.razao_social.substring(0, 10).trim()}.pdf`, { type: 'application/pdf' });
+
+      // Tenta usar a API nativa de compartilhamento (Celulares/Tablets)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Relatório Cadastral',
+          text: `Segue PDF com dados da empresa ${companyData.razao_social}`,
+        });
+      } else {
+        // Fallback para Desktop: Baixa o arquivo e avisa
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_${companyData.cnpj}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert('PDF Baixado! Como seu navegador não suporta envio direto de arquivos, por favor anexe o arquivo baixado manualmente no WhatsApp.');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar/compartilhar PDF:', error);
+      alert('Ocorreu um erro ao tentar gerar o PDF.');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 font-sans">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      {/* Header - Hidden in Print */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm no-print">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo Placeholder / CSS Representation */}
             <div className="flex items-center select-none" title="CHOC-LAR">
-              {/* If you have the image file, uncomment the line below and place the file in public folder */}
-              {/* <img src="/logo-choc-lar.png" alt="CHOC-LAR" className="h-10 w-auto mr-2" /> */}
-              
               <div className="flex items-baseline text-2xl font-black tracking-tight">
                 <span className="text-green-500">C</span>
                 <span className="text-blue-500">H</span>
                 <span className="text-red-500 relative flex items-center justify-center mx-0.5">
-                  <span className="text-xl">🍭</span> {/* Representing the lollipop O */}
+                  <span className="text-xl">🍭</span>
                 </span>
                 <span className="text-pink-400">C</span>
                 <span className="w-2"></span>
@@ -146,8 +229,8 @@ const App: React.FC = () => {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
         
-        {/* Search Section */}
-        <div className="text-center mb-10">
+        {/* Search Section - Hidden in Print */}
+        <div className="text-center mb-10 no-print">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500">
               Cadastro Rápido
@@ -189,31 +272,34 @@ const App: React.FC = () => {
         {/* Results Section */}
         {companyData && (
           <div className="animate-fade-in-up">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 no-print">
               <h2 className="text-xl font-bold text-gray-800">Resultado da Consulta</h2>
               
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                
+                {/* Share Button (Replaces WhatsApp & Print) */}
                 <button 
-                  onClick={handleGeneratePDF}
-                  disabled={isGeneratingPdf}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+                  onClick={handleShare}
+                  disabled={isSharing}
+                  className="bg-[#25D366] hover:bg-[#128C7E] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                 >
-                  {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <FileDown size={18} />}
-                  Compartilhar PDF
+                  {isSharing ? <Loader2 className="animate-spin" size={18} /> : <Share2 size={18} />}
+                  {isSharing ? 'Gerando PDF...' : 'Compartilhar'}
                 </button>
 
-                <button 
-                  onClick={handleRegisterSimulation}
-                  className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                 {/* Copy Button */}
+                 <button 
+                  onClick={handleCopyData}
+                  className={`px-3 py-2 rounded-lg font-bold shadow-sm transition-all flex items-center gap-2 border ${isCopied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
                 >
-                  <Save size={18} />
-                  Confirmar Cadastro
+                  {isCopied ? <Check size={18} /> : <Copy size={18} />}
                 </button>
+
               </div>
             </div>
 
-            {/* Content Wrapper for PDF Generation */}
-            <div id="report-content" className="bg-slate-50 p-1">
+            {/* Report Content - This is what gets generated as PDF */}
+            <div id="report-content" className="bg-white mx-auto w-full">
               <CompanyCard 
                 data={companyData} 
                 fantasyName={fantasyName}
@@ -229,17 +315,17 @@ const App: React.FC = () => {
                 analysis={analysis} 
               />
               
-              {/* Watermark for PDF only (visible in HTML but styled to look okay) */}
-              <div className="mt-4 text-center text-xs text-gray-400 opacity-50">
+              {/* Watermark - Only visible in print/PDF */}
+              <div className="py-2 text-center text-[10px] text-gray-400 opacity-50 border-t border-gray-100 mt-2">
                 Relatório gerado automaticamente pelo sistema PESQUISA CNPJ CHOC-LAR
               </div>
             </div>
           </div>
         )}
 
-        {/* Empty State / Features */}
+        {/* Empty State */}
         {!companyData && status !== LoadingState.LOADING && (
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-center opacity-60">
+          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-center opacity-60 no-print">
              <div className="p-4">
                 <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search size={24} />
